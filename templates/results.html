@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Auswertung{% endblock %}
+{% block content %}
+<section class="card">
+    <h1>Turnier-Auswertung</h1>
+    {% if phase != 'finished' %}
+    <div class="info-banner warning-banner">Die finale Auswertung ist erst nach „Turnier beenden“ komplett.</div>
+    {% else %}
+    <div class="info-banner success-banner">Turnier beendet. Hier ist die Siegerehrung.</div>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h2>Sieger je Sportart</h2>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>Sportart</th>
+                <th>1. Platz</th>
+                <th>2. Platz</th>
+                <th>Finale</th>
+            </tr>
+            {% for row in discipline_results %}
+            <tr>
+                <td>{{ row["discipline"] }}</td>
+                <td><strong>{{ row["winner"] }}</strong></td>
+                <td>{{ row["second"] }}</td>
+                <td>{{ row["final_round"] }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4">Noch keine finalen Disziplin-Sieger vorhanden.</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</section>
+
+<section class="card">
+    <h2>Beste Gesamtspieler des Turniers</h2>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>#</th>
+                <th>Spieler</th>
+                <th>S</th>
+                <th>U</th>
+                <th>N</th>
+                <th>Matchpunkte</th>
+                <th>Sätze</th>
+                <th>Satzdiff</th>
+                <th>Punkte Für</th>
+                <th>Punkte Gegen</th>
+                <th>Diff</th>
+            </tr>
+            {% for row in overall_rankings %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ row["name"] }}</td>
+                <td>{{ row["wins"] }}</td>
+                <td>{{ row["draws"] }}</td>
+                <td>{{ row["losses"] }}</td>
+                <td><strong>{{ row["points"] }}</strong></td>
+                <td>{{ row["sets_for"] }} : {{ row["sets_against"] }}</td>
+                <td>{{ row["sets_diff"] }}</td>
+                <td>{{ row["score_for"] }}</td>
+                <td>{{ row["score_against"] }}</td>
+                <td>{{ row["score_diff"] }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="11">Noch keine Gesamtauswertung vorhanden.</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</section>
+{% endblock %}

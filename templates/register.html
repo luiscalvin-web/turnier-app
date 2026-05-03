@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Spieler anmelden{% endblock %}
+{% block content %}
+<section class="card form-card">
+    <h1>Spieler Anmeldung</h1>
+    <form method="POST" class="form-grid preserve-scroll-form">
+        <label for="name">Name</label>
+        <input id="name" type="text" name="name" required>
+
+        <label for="age">Alter</label>
+        <input id="age" type="number" name="age" min="1" max="120" required>
+
+        <button class="button primary" type="submit">Anmelden</button>
+    </form>
+</section>
+{% endblock %}

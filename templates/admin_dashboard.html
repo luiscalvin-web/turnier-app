@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<section class="card">
+    <div class="dashboard-header">
+        <div>
+            <h1>Admin Dashboard</h1>
+            <p>Verwalte Spieler, Turnier, Gruppen, Spiele und KO-Runden.</p>
+        </div>
+        <div class="button-row">
+            <a class="button primary preserve-scroll-link" href="{{ url_for('create_tournament') }}">Turnier erstellen</a>
+            <a class="button secondary preserve-scroll-link" href="{{ url_for('prepare_knockout') }}">KO-Feld berechnen</a>
+            <a class="button secondary preserve-scroll-link" href="{{ url_for('start_knockout') }}">KO-Phase starten</a>
+            {% if can_finish %}
+            <a class="button primary preserve-scroll-link" href="{{ url_for('finish_tournament') }}">Turnier beenden</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="phase-banner phase-{{ phase|replace('_', '-') }}">
+        Aktuelle Phase:
+        {% if phase == 'groups' %}
+            Gruppenphase läuft
+        {% elif phase == 'waiting_for_knockout' %}
+            Gruppenphase beendet – KO wartet auf Freigabe
+        {% elif phase == 'knockout' %}
+            KO-Phase läuft
+        {% elif phase == 'finished' %}
+            Turnier beendet
+        {% endif %}
+    </div>
+
+    {% if settings %}
+    <div class="info-banner">
+        <strong>Aktuelle Einstellungen:</strong>
+        Gruppengröße {{ settings["group_size"] }}
+    </div>
+
+    <div class="discipline-summary-grid admin-discipline-grid">
+        {% for item in discipline_cards %}
+        <div class="discipline-summary-card">
+            <strong>{{ item.label }}</strong>
+            <div>Zielwert: {{ item.target }}</div>
+            <div>Sätze/Legs: {{ item.sets }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h2>Angemeldete Spieler</h2>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Alter</th>
+                <th>Aktion</th>
+            </tr>
+            {% for player in players %}
+            <tr>
+                <td>{{ player["id"] }}</td>
+                <td>{{ player["name"] }}</td>
+                <td>{{ player["age"] }}</td>
+                <td class="actions">
+                    <a class="button small secondary preserve-scroll-link" href="{{ url_for('edit_player', player_id=player['id']) }}">Bearbeiten</a>
+                    <a class="button small danger preserve-scroll-link" href="{{ url_for('delete_player', player_id=player['id']) }}">Löschen</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4">Noch keine Spieler angemeldet.</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</section>
+
+<section class="card" id="admin-groups">
+    <h2>Gruppen</h2>
+    {% set ns = namespace(current='') %}
+    {% for group in groups %}
+        {% if ns.current != group["group_name"] %}
+            {% if not loop.first %}</div>{% endif %}
+            <div class="group-block" id="{{ group['group_name']|lower|replace(' ', '-') }}">
+                <h3>{{ group["group_name"] }}</h3>
+                <div class="group-player-list">
+            {% set ns.current = group["group_name"] %}
+        {% endif %}
+        <div class="group-player-chip">{{ group["name"] }} <span>{{ group["age"] }}</span></div>
+        {% if loop.last %}</div></div>{% endif %}
+    {% else %}
+        <p>Noch keine Gruppen erzeugt.</p>
+    {% endfor %}
+</section>
+
+<section class="card" id="group-matches">
+    <h2>Spielplan Gruppenphase</h2>
+    {% set ns = namespace(current_group='') %}
+    {% for match in matches %}
+        {% if ns.current_group != match["group_name"] %}
+            {% if not loop.first %}</tbody></table></div></div>{% endif %}
+            <div class="group-section" id="spiele-{{ match['group_name']|lower|replace(' ', '-') }}">
+                <h3>{{ match["group_name"] }}</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Disziplin</th>
+                                <th>Spieler 1</th>
+                                <th>Spieler 2</th>
+                                <th>Sätze</th>
+                                <th>Gesamtpunkte</th>
+                                <th>Status</th>
+                                <th>Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            {% set ns.current_group = match["group_name"] %}
+        {% endif %}
+            <tr>
+                <td>{{ match["discipline"] }}</td>
+                <td>{{ match["player1_name"] }}</td>
+                <td>{{ match["player2_name"] }}</td>
+                <td>{{ match["sets_won_1"] }} : {{ match["sets_won_2"] }}</td>
+                <td>{{ match["score1"] }} : {{ match["score2"] }}</td>
+                <td>{{ match["status"] }}</td>
+                <td><a class="button small primary preserve-scroll-link" href="{{ url_for('update_match', match_id=match['id']) }}">Ergebnis</a></td>
+            </tr>
+        {% if loop.last %}</tbody></table></div></div>{% endif %}
+    {% else %}
+    <p>Noch keine Gruppenspiele erzeugt.</p>
+    {% endfor %}
+</section>
+
+<section class="card" id="group-standings">
+    <h2>Gruppentabelle</h2>
+    {% set ns = namespace(current_group='') %}
+    {% for standing in standings %}
+        {% if ns.current_group != standing["group_name"] %}
+            {% if not loop.first %}</tbody></table></div></div>{% endif %}
+            <div class="group-section" id="tabelle-{{ standing['group_name']|lower|replace(' ', '-') }}">
+                <h3>{{ standing["group_name"] }}</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Spieler</th>
+                                <th>S</th>
+                                <th>U</th>
+                                <th>N</th>
+                                <th>Matchpunkte</th>
+                                <th>Sätze</th>
+                                <th>Satzdiff</th>
+                                <th>Punkte Für</th>
+                                <th>Punkte Gegen</th>
+                                <th>Diff</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            {% set ns.current_group = standing["group_name"] %}
+        {% endif %}
+            <tr>
+                <td>{{ standing["name"] }}</td>
+                <td>{{ standing["wins"] }}</td>
+                <td>{{ standing["draws"] }}</td>
+                <td>{{ standing["losses"] }}</td>
+                <td><strong>{{ standing["points"] }}</strong></td>
+                <td>{{ standing["sets_for"] }} : {{ standing["sets_against"] }}</td>
+                <td>{{ standing["sets_diff"] }}</td>
+                <td>{{ standing["score_for"] }}</td>
+                <td>{{ standing["score_against"] }}</td>
+                <td>{{ standing["score_diff"] }}</td>
+            </tr>
+        {% if loop.last %}</tbody></table></div></div>{% endif %}
+    {% else %}
+    <p>Noch keine Tabellenwerte vorhanden.</p>
+    {% endfor %}
+</section>
+
+<section class="card" id="ko-rounds">
+    <h2>KO-Runden</h2>
+    {% set ns = namespace(current_discipline='') %}
+    {% for ko in knockout_matches %}
+        {% if ns.current_discipline != ko["discipline"] %}
+            {% if not loop.first %}</tbody></table></div></div>{% endif %}
+            <div class="group-section">
+                <h3>{{ ko["discipline"] }}</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Runde</th>
+                                <th>Spiel</th>
+                                <th>Spieler 1</th>
+                                <th>Spieler 2</th>
+                                <th>Sätze</th>
+                                <th>Gesamtpunkte</th>
+                                <th>Status</th>
+                                <th>Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            {% set ns.current_discipline = ko["discipline"] %}
+        {% endif %}
+            <tr class="{% if ko['round_name'] == 'Finale' %}row-final{% elif ko['round_name'] == 'Halbfinale' %}row-semifinal{% endif %}">
+                <td>{{ ko["round_name"] }}</td>
+                <td>#{{ ko["match_order"] }}</td>
+                <td>{{ ko["player1_label"] }}</td>
+                <td>{{ ko["player2_label"] }}</td>
+                <td>{{ ko["sets_won_1"] }} : {{ ko["sets_won_2"] }}</td>
+                <td>{{ ko["score1"] }} : {{ ko["score2"] }}</td>
+                <td>{{ ko["status"] }}</td>
+                <td><a class="button small primary preserve-scroll-link" href="{{ url_for('update_knockout_match', match_id=ko['id']) }}">Ergebnis</a></td>
+            </tr>
+        {% if loop.last %}</tbody></table></div></div>{% endif %}
+    {% else %}
+    <p>Noch keine KO-Runde erzeugt.</p>
+    {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Spieler bearbeiten{% endblock %}
+{% block content %}
+<section class="card form-card">
+    <h1>Spieler bearbeiten</h1>
+    <form method="POST" class="form-grid preserve-scroll-form">
+        <label for="name">Name</label>
+        <input id="name" type="text" name="name" value="{{ player['name'] }}" required>
+
+        <label for="age">Alter</label>
+        <input id="age" type="number" name="age" value="{{ player['age'] }}" required>
+
+        <button class="button primary" type="submit">Speichern</button>
+    </form>
+</section>
+{% endblock %}

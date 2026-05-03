@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Turnier App{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container topbar-inner">
+            <a class="brand" href="{{ url_for('home') }}">Turnier App</a>
+            <nav class="nav">
+                <a href="{{ url_for('home') }}">Start</a>
+                <a href="{{ url_for('register') }}">Anmeldung</a>
+                <a href="{{ url_for('groups_overview') }}">Gruppen</a>
+                <a href="{{ url_for('knockout_view') }}">KO</a>
+                <a href="{{ url_for('results_view') }}">Auswertung</a>
+                <a href="{{ url_for('admin') }}">Admin</a>
+                {% if session.get('is_admin') %}
+                <a href="{{ url_for('admin_logout') }}">Logout</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="container page">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-list">
+                    {% for message in messages %}
+                        <div class="flash">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
