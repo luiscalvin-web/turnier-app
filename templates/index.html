@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Start | Turnier App{% endblock %}
+{% block content %}
+<section class="hero card">
+    <h1>Willkommen zur Turnier-App</h1>
+    <p>Lokale Turnierverwaltung für Familie, Freunde und kleine Events im gleichen WLAN.</p>
+
+    <div class="hero-stats">
+        <div class="stat">
+            <span class="stat-value">{{ player_count }}</span>
+            <span class="stat-label">Angemeldete Spieler</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value">{{ discipline_cards|length }}</span>
+            <span class="stat-label">Aktive Disziplinen</span>
+        </div>
+    </div>
+
+    <div class="phase-banner phase-{{ phase|replace('_', '-') }}">
+        Aktuelle Phase:
+        {% if phase == 'groups' %}
+            Gruppenphase läuft
+        {% elif phase == 'waiting_for_knockout' %}
+            Gruppenphase beendet – warte auf Adminfreigabe
+        {% elif phase == 'knockout' %}
+            KO-Phase läuft
+        {% elif phase == 'finished' %}
+            Turnier beendet
+        {% endif %}
+    </div>
+
+    {% if discipline_cards %}
+    <div class="discipline-summary-grid">
+        {% for item in discipline_cards %}
+        <div class="discipline-summary-card">
+            <strong>{{ item.label }}</strong>
+            <div>Zielwert: {{ item.target }}</div>
+            <div>Sätze/Legs: {{ item.sets }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="button-row">
+        <a class="button primary" href="{{ url_for('register') }}">Spieler anmelden</a>
+        <a class="button secondary" href="{{ url_for('groups_overview') }}">Gruppen ansehen</a>
+        <a class="button secondary" href="{{ url_for('knockout_view') }}">KO-Seite</a>
+        <a class="button secondary" href="{{ url_for('results_view') }}">Auswertung</a>
+        <a class="button secondary" href="{{ url_for('admin') }}">Admin-Bereich</a>
+    </div>
+</section>
+{% endblock %}
