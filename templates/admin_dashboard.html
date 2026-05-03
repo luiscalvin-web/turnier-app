@@ -217,4 +217,23 @@
     <p>Noch keine KO-Runde erzeugt.</p>
     {% endfor %}
 </section>
+
+<hr>
+
+<section>
+  <h2>Gefahrenzone</h2>
+  <p>Das löscht alle Spieler, Gruppen, Spiele, Ergebnisse und Einstellungen.</p>
+
+  <form method="POST" action="{{ url_for('reset_all') }}">
+    <label>
+      Zur Bestätigung exakt <strong>ZURÜCKSETZEN</strong> eingeben:
+    </label>
+    <input type="text" name="confirm" required>
+
+    <button type="submit" onclick="return confirm('Wirklich ALLE Daten löschen?')">
+      Alles zurücksetzen
+    </button>
+  </form>
+</section>
+
 {% endblock %}
