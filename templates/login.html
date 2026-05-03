@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Familien Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="login-page">
+        <h1>Familien Login</h1>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <p style="color:red;">{{ messages[0] }}</p>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <input type="password" name="password" placeholder="Familien-Passwort" required>
+            <button type="submit">Einloggen</button>
+        </form>
+    </main>
+</body>
+</html>
