@@ -12,6 +12,9 @@ DB_DIR = BASE_DIR / "database"
 DB_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DB_DIR / "tournament.db"
 
+app.secret_key = os.environ.get("SECRET_KEY", "turnier-app-dev-secret")
+
+FAMILY_PASSWORD = os.environ.get("FAMILY_PASSWORD", "familie123")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "1234")
 
 DISCIPLINE_CONFIG = {
