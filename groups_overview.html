@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Gruppen auswählen{% endblock %}
+{% block content %}
+<section class="card">
+    <h1>Gruppen auswählen</h1>
+    <p>Wähle deine Gruppe aus, um nur die Informationen deiner Gruppe zu sehen.</p>
+
+    {% if phase == 'waiting_for_knockout' %}
+    <div class="info-banner warning-banner">
+        Warten auf Adminfreigabe. Die Gruppenphase ist beendet und die KO-Runde wird vorbereitet.
+    </div>
+    {% elif phase == 'knockout' %}
+    <div class="info-banner success-banner">
+        Die KO-Phase läuft bereits. Gruppenspiele können nicht mehr eingetragen werden.
+    </div>
+    {% elif phase == 'finished' %}
+    <div class="info-banner success-banner">
+        Das Turnier ist beendet. Die Auswertung ist verfügbar.
+    </div>
+    {% endif %}
+
+    <div class="group-selector-grid">
+        {% for group in groups %}
+        <a class="group-selector-card preserve-scroll-link" href="{{ url_for('group_view', group_name=group['group_name']) }}">
+            <strong>{{ group["group_name"] }}</strong>
+            <span>{{ group_counts[group["group_name"]] }} Spieler</span>
+        </a>
+        {% else %}
+        <p>Noch keine Gruppen vorhanden.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
