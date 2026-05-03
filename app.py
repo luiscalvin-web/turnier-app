@@ -39,6 +39,9 @@ def get_connection():
 def is_admin():
     return session.get("is_admin", False)
 
+def is_logged_in():
+    return session.get("logged_in", False)
+
 
 def ensure_column(cursor, table, column, definition):
     cursor.execute(f"PRAGMA table_info({table})")
