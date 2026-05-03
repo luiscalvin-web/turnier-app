@@ -815,6 +815,37 @@ def compute_discipline_results():
     conn.close()
     return results
 
+@app.before_request
+def require_family_login():
+    allowed_routes = {"family_login", "static"}
+
+    if request.endpoint in allowed_routes:
+        return
+
+    if not is_logged_in():
+        return redirect(url_for("family_login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def family_login():
+    if request.method == "POST":
+        password = request.form.get("password", "")
+
+        if password == FAMILY_PASSWORD:
+            session["logged_in"] = True
+            return redirect(url_for("home"))
+
+        flash("Falsches Familien-Passwort.")
+        return redirect(url_for("family_login"))
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("family_login"))
+    
 
 @app.route("/")
 def home():
