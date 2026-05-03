@@ -1302,6 +1302,36 @@ def update_knockout_match(match_id):
     conn.close()
     return render_template("update_knockout_match.html", match=match, settings=settings, set_rows=range(1, settings["sets"] + 1), sets_values=sets_values)
 
+@app.route("/admin/reset_all", methods=["POST"])
+def reset_all():
+    if not is_admin():
+        return redirect(url_for("admin"))
+
+    confirm = request.form.get("confirm", "").strip()
+
+    if confirm != "ZURÜCKSETZEN":
+        flash("Zurücksetzen abgebrochen. Bitte exakt ZURÜCKSETZEN eingeben.")
+        return redirect(url_for("admin"))
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM knockout_match_sets")
+    cursor.execute("DELETE FROM knockout_matches")
+    cursor.execute("DELETE FROM match_sets")
+    cursor.execute("DELETE FROM matches")
+    cursor.execute("DELETE FROM standings")
+    cursor.execute("DELETE FROM groups")
+    cursor.execute("DELETE FROM tournament_settings")
+    cursor.execute("DELETE FROM players")
+    cursor.execute("UPDATE tournament_meta SET phase = 'groups' WHERE id = 1")
+
+    conn.commit()
+    conn.close()
+
+    flash("Alle Daten wurden zurückgesetzt.")
+    return redirect(url_for("admin"))
+    
 
 if __name__ == "__main__":
     init_db()
