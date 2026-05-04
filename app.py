@@ -3,7 +3,6 @@ import sqlite3
 from pathlib import Path
 import math
 import os
-import random
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "turnier-app-dev-secret")
@@ -346,16 +345,27 @@ def validate_set_score(discipline, target, score1, score2):
         if winner > target and winner - loser != 2:
             return False, "Verlängerung im Tischtennis braucht genau 2 Punkte Vorsprung."
         return True, ""
-    if discipline in ("Billard", "Kicker", "Cornhole"):
-        if score1 == score2:
-            return False, "Ein Satz darf nicht unentschieden enden."
-        winner = max(score1, score2)
-        loser = min(score1, score2)
-        if winner != target:
-            return False, f"Der Gewinner muss genau {target} erreichen."
-        if loser >= target:
-            return False, "Der Verlierer darf das Ziel nicht ebenfalls erreichen."
-        return True, ""
+    if discipline == "Billard":
+    if score1 == score2:
+        return False, "Ein Satz darf nicht unentschieden enden."
+    if score1 > 8 or score2 > 8:
+        return False, "Beim Billard sind maximal 8 Punkte möglich."
+    return True, ""
+
+if discipline == "Cornhole":
+    if score1 == score2:
+        return False, "Ein Satz darf nicht unentschieden enden."
+    return True, ""
+
+if discipline == "Kicker":
+    if score1 == score2:
+        return False, "Ein Satz darf nicht unentschieden enden."
+    winner = max(score1, score2)
+    loser = min(score1, score2)
+    if winner != target:
+        return False, f"Der Gewinner muss genau {target} erreichen."
+    if loser >= target:
+        return False, "Der Verlierer darf das Ziel nicht ebenfalls erreichen."
     return True, ""
 
 
@@ -1332,76 +1342,6 @@ def reset_all():
 
     flash("Alle Daten wurden zurückgesetzt.")
     return redirect(url_for("admin"))
-
-
-@app.route("/admin/test_setup")
-def test_setup():
-    conn = sqlite3.connect("database/tournament.db")
-    cursor = conn.cursor()
-
-    # ALLES LÖSCHEN
-    cursor.execute("DELETE FROM players")
-    cursor.execute("DELETE FROM groups")
-    cursor.execute("DELETE FROM matches")
-    cursor.execute("DELETE FROM standings")
-    cursor.execute("DELETE FROM knockout_matches")
-
-    # TESTSPIELER
-    names = [
-        "Max", "Lukas", "Anna", "Tim",
-        "Sophie", "Leon", "Mia", "Paul",
-        "Emma", "Noah", "Ben", "Jonas",
-        "Lena", "Tom", "Clara", "Finn"
-    ]
-
-    for i, name in enumerate(names):
-        cursor.execute(
-            "INSERT INTO players (name, age) VALUES (?, ?)",
-            (name, random.randint(10, 40))
-        )
-
-    conn.commit()
-    conn.close()
-
-    # Turnier neu erzeugen
-    create_groups()
-    create_matches()
-
-    return redirect("/admin")
-
-@app.route("/admin/test_simulate")
-def test_simulate():
-    conn = sqlite3.connect("database/tournament.db")
-    cursor = conn.cursor()
-
-    # Alle Gruppenspiele holen
-    cursor.execute("SELECT id FROM matches")
-    matches = cursor.fetchall()
-
-    for m in matches:
-        match_id = m[0]
-
-        score1 = random.randint(0, 10)
-        score2 = random.randint(0, 10)
-
-        # kein Gleichstand (für KO später einfacher)
-        if score1 == score2:
-            score2 += 1
-
-        cursor.execute("""
-            UPDATE matches
-            SET score1 = ?, score2 = ?, status = 'abgeschlossen'
-            WHERE id = ?
-        """, (score1, score2, match_id))
-
-    conn.commit()
-    conn.close()
-
-    update_standings()
-
-    return redirect("/admin")
-
-
     
 
 if __name__ == "__main__":
