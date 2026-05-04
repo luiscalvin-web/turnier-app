@@ -17,6 +17,16 @@
         </div>
     </div>
 
+    <div style="margin-bottom: 20px;">
+    <a class="button primary" href="/admin/test_setup">
+        Testturnier erstellen
+    </a>
+
+    <a class="button secondary" href="/admin/test_simulate">
+        Komplett simulieren
+    </a>
+</div>
+
     <div class="phase-banner phase-{{ phase|replace('_', '-') }}">
         Aktuelle Phase:
         {% if phase == 'groups' %}
