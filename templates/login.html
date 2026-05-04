@@ -2,21 +2,23 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Familien Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <main class="login-page">
+<body class="login-body">
+    <main class="login-card">
         <h1>Familien Login</h1>
+        <p>Bitte Familien-Passwort eingeben.</p>
 
         {% with messages = get_flashed_messages() %}
           {% if messages %}
-            <p style="color:red;">{{ messages[0] }}</p>
+            <p class="login-error">{{ messages[0] }}</p>
           {% endif %}
         {% endwith %}
 
         <form method="POST">
-            <input type="password" name="password" placeholder="Familien-Passwort" required>
+            <input type="password" name="password" placeholder="Passwort" required>
             <button type="submit">Einloggen</button>
         </form>
     </main>
