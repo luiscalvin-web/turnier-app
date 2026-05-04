@@ -12,8 +12,6 @@ DB_DIR = BASE_DIR / "database"
 DB_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DB_DIR / "tournament.db"
 
-app.secret_key = os.environ.get("SECRET_KEY", "turnier-app-dev-secret")
-
 FAMILY_PASSWORD = os.environ.get("FAMILY_PASSWORD", "familie123")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "1234")
 
@@ -31,16 +29,26 @@ PHASES = {"groups", "waiting_for_knockout", "knockout", "finished"}
 
 def get_connection():
     DB_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
 def is_admin():
     return session.get("is_admin", False)
 
+
 def is_logged_in():
     return session.get("logged_in", False)
+
+
+def parse_non_negative_int(value, field_name):
+    value = str(value).strip()
+    if not value.isdigit():
+        return None, f"{field_name} muss eine gültige Zahl sein."
+    return int(value), None
 
 
 def ensure_column(cursor, table, column, definition):
@@ -321,6 +329,7 @@ def get_discipline_settings(discipline):
 def validate_set_score(discipline, target, score1, score2):
     if score1 < 0 or score2 < 0:
         return False, "Negative Werte sind nicht erlaubt."
+
     if discipline == "Dart":
         if score1 == score2:
             return False, "Bei Dart kann ein Leg nicht unentschieden enden."
@@ -329,10 +338,12 @@ def validate_set_score(discipline, target, score1, score2):
         if score2 == 0 and score1 > 0:
             return True, ""
         return False, "Bei Dart muss genau ein Spieler 0 Restpunkte haben."
+
     if discipline == "Bogenschießen":
         if score1 > 30 or score2 > 30:
             return False, "Beim Bogenschießen sind pro Satz maximal 30 Punkte möglich."
         return True, ""
+
     if discipline == "Tischtennis":
         if score1 == score2:
             return False, "Ein Satz darf nicht unentschieden enden."
@@ -345,27 +356,30 @@ def validate_set_score(discipline, target, score1, score2):
         if winner > target and winner - loser != 2:
             return False, "Verlängerung im Tischtennis braucht genau 2 Punkte Vorsprung."
         return True, ""
+
     if discipline == "Billard":
-    if score1 == score2:
-        return False, "Ein Satz darf nicht unentschieden enden."
-    if score1 > 8 or score2 > 8:
-        return False, "Beim Billard sind maximal 8 Punkte möglich."
-    return True, ""
+        if score1 == score2:
+            return False, "Ein Satz darf nicht unentschieden enden."
+        if score1 > 8 or score2 > 8:
+            return False, "Beim Billard sind maximal 8 Punkte möglich."
+        return True, ""
 
-if discipline == "Cornhole":
-    if score1 == score2:
-        return False, "Ein Satz darf nicht unentschieden enden."
-    return True, ""
+    if discipline == "Cornhole":
+        if score1 == score2:
+            return False, "Ein Satz darf nicht unentschieden enden."
+        return True, ""
 
-if discipline == "Kicker":
-    if score1 == score2:
-        return False, "Ein Satz darf nicht unentschieden enden."
-    winner = max(score1, score2)
-    loser = min(score1, score2)
-    if winner != target:
-        return False, f"Der Gewinner muss genau {target} erreichen."
-    if loser >= target:
-        return False, "Der Verlierer darf das Ziel nicht ebenfalls erreichen."
+    if discipline == "Kicker":
+        if score1 == score2:
+            return False, "Ein Satz darf nicht unentschieden enden."
+        winner = max(score1, score2)
+        loser = min(score1, score2)
+        if winner != target:
+            return False, f"Der Gewinner muss genau {target} erreichen."
+        if loser >= target:
+            return False, "Der Verlierer darf das Ziel nicht ebenfalls erreichen."
+        return True, ""
+
     return True, ""
 
 
@@ -431,6 +445,8 @@ def create_groups():
         conn.close()
         return
     desired_group_size = result["group_size"]
+    if desired_group_size <= 0:
+        desired_group_size = 1
     cursor.execute("SELECT id, name, age FROM players ORDER BY age ASC, name ASC")
     players = cursor.fetchall()
     cursor.execute("DELETE FROM groups")
@@ -446,7 +462,7 @@ def create_groups():
     group_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     start = 0
     for idx, size in enumerate(group_sizes):
-        group_name = f"Gruppe {group_letters[idx]}"
+        group_name = f"Gruppe {group_letters[idx]}" if idx < len(group_letters) else f"Gruppe {idx + 1}"
         chunk = players[start:start + size]
         for player in chunk:
             cursor.execute("INSERT INTO groups (group_name, player_id) VALUES (?, ?)", (group_name, player["id"]))
@@ -826,6 +842,7 @@ def compute_discipline_results():
     conn.close()
     return results
 
+
 @app.before_request
 def require_family_login():
     allowed_routes = {"family_login", "static"}
@@ -856,7 +873,7 @@ def family_login():
 def logout():
     session.clear()
     return redirect(url_for("family_login"))
-    
+
 
 @app.route("/")
 def home():
@@ -875,13 +892,17 @@ def home():
 def register():
     if request.method == "POST":
         name = request.form["name"].strip()
-        age = request.form["age"].strip()
-        if not name or not age:
+        age_raw = request.form["age"].strip()
+        if not name or not age_raw:
             flash("Bitte Name und Alter eingeben.")
+            return redirect(url_for("register"))
+        age, error = parse_non_negative_int(age_raw, "Alter")
+        if error:
+            flash(error)
             return redirect(url_for("register"))
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO players (name, age) VALUES (?, ?)", (name, int(age)))
+        cursor.execute("INSERT INTO players (name, age) VALUES (?, ?)", (name, age))
         conn.commit()
         conn.close()
         flash("Spieler wurde erfolgreich angemeldet.")
@@ -1038,7 +1059,7 @@ def admin_logout():
     return redirect(url_for("admin"))
 
 
-@app.route("/delete_player/<int:player_id>")
+@app.route("/delete_player/<int:player_id>", methods=["POST"])
 def delete_player(player_id):
     if not is_admin():
         return redirect(url_for("admin"))
@@ -1061,8 +1082,17 @@ def edit_player(player_id):
     cursor = conn.cursor()
     if request.method == "POST":
         name = request.form["name"].strip()
-        age = request.form["age"].strip()
-        cursor.execute("UPDATE players SET name = ?, age = ? WHERE id = ?", (name, int(age), player_id))
+        age_raw = request.form["age"].strip()
+        if not name or not age_raw:
+            flash("Bitte Name und Alter eingeben.")
+            conn.close()
+            return redirect(url_for("edit_player", player_id=player_id))
+        age, error = parse_non_negative_int(age_raw, "Alter")
+        if error:
+            flash(error)
+            conn.close()
+            return redirect(url_for("edit_player", player_id=player_id))
+        cursor.execute("UPDATE players SET name = ?, age = ? WHERE id = ?", (name, age, player_id))
         conn.commit()
         conn.close()
         flash("Spieler wurde aktualisiert.")
@@ -1078,25 +1108,52 @@ def create_tournament():
     if not is_admin():
         return redirect(url_for("admin"))
     if request.method == "POST":
-        group_size = int(request.form["group_size"])
+        group_size, error = parse_non_negative_int(request.form.get("group_size", ""), "Gruppengröße")
+        if error or group_size is None or group_size <= 0:
+            flash("Bitte eine gültige Gruppengröße größer als 0 eingeben.")
+            return redirect(url_for("create_tournament"))
+
         billiard = 1 if "billiard" in request.form else 0
         dart = 1 if "dart" in request.form else 0
         kicker = 1 if "kicker" in request.form else 0
         table_tennis = 1 if "table_tennis" in request.form else 0
         cornhole = 1 if "cornhole" in request.form else 0
         archery = 1 if "archery" in request.form else 0
-        billiard_target = int(request.form.get("billiard_target", 8))
-        billiard_sets = int(request.form.get("billiard_sets", 1))
-        dart_target = int(request.form.get("dart_target", 501))
-        dart_sets = int(request.form.get("dart_sets", 1))
-        kicker_target = int(request.form.get("kicker_target", 10))
-        kicker_sets = int(request.form.get("kicker_sets", 1))
-        table_tennis_target = int(request.form.get("table_tennis_target", 11))
-        table_tennis_sets = int(request.form.get("table_tennis_sets", 1))
-        cornhole_target = int(request.form.get("cornhole_target", 21))
-        cornhole_sets = int(request.form.get("cornhole_sets", 1))
+
+        fields = {
+            "billiard_target": 8,
+            "billiard_sets": 1,
+            "dart_target": 501,
+            "dart_sets": 1,
+            "kicker_target": 10,
+            "kicker_sets": 1,
+            "table_tennis_target": 11,
+            "table_tennis_sets": 1,
+            "cornhole_target": 21,
+            "cornhole_sets": 1,
+            "archery_sets": 1,
+        }
+        parsed = {}
+        for field, default in fields.items():
+            parsed_value, field_error = parse_non_negative_int(request.form.get(field, default), field)
+            if field_error or parsed_value is None:
+                flash(f"Ungültiger Wert bei {field}.")
+                return redirect(url_for("create_tournament"))
+            parsed[field] = parsed_value
+
+        billiard_target = parsed["billiard_target"]
+        billiard_sets = max(1, parsed["billiard_sets"])
+        dart_target = parsed["dart_target"]
+        dart_sets = max(1, parsed["dart_sets"])
+        kicker_target = parsed["kicker_target"]
+        kicker_sets = max(1, parsed["kicker_sets"])
+        table_tennis_target = parsed["table_tennis_target"]
+        table_tennis_sets = max(1, parsed["table_tennis_sets"])
+        cornhole_target = parsed["cornhole_target"]
+        cornhole_sets = max(1, parsed["cornhole_sets"])
         archery_target = 30
-        archery_sets = int(request.form.get("archery_sets", 1))
+        archery_sets = max(1, parsed["archery_sets"])
+
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM tournament_settings")
@@ -1128,7 +1185,7 @@ def create_tournament():
     return render_template("create_tournament.html")
 
 
-@app.route("/prepare_knockout")
+@app.route("/prepare_knockout", methods=["POST"])
 def prepare_knockout():
     if not is_admin():
         return redirect(url_for("admin"))
@@ -1138,7 +1195,7 @@ def prepare_knockout():
     return redirect(url_for("admin"))
 
 
-@app.route("/start_knockout")
+@app.route("/start_knockout", methods=["POST"])
 def start_knockout():
     if not is_admin():
         return redirect(url_for("admin"))
@@ -1147,7 +1204,7 @@ def start_knockout():
     return redirect(url_for("admin"))
 
 
-@app.route("/finish_tournament")
+@app.route("/finish_tournament", methods=["POST"])
 def finish_tournament():
     if not is_admin():
         return redirect(url_for("admin"))
@@ -1207,8 +1264,11 @@ def update_match(match_id):
             if not raw1 or not raw2:
                 error_message = f"Satz {i} ist unvollständig."
                 break
-            score1 = int(raw1)
-            score2 = int(raw2)
+            score1, error1 = parse_non_negative_int(raw1, f"Satz {i} Spieler 1")
+            score2, error2 = parse_non_negative_int(raw2, f"Satz {i} Spieler 2")
+            if error1 or error2:
+                error_message = error1 or error2
+                break
             valid, msg = validate_set_score(match["discipline"], settings["target"], score1, score2)
             if not valid:
                 error_message = f"Satz {i}: {msg}"
@@ -1262,6 +1322,14 @@ def update_knockout_match(match_id):
         WHERE k.id = ?
     """, (match_id,))
     match = cursor.fetchone()
+    if not match:
+        conn.close()
+        flash("KO-Spiel nicht gefunden.")
+        return redirect(url_for("admin"))
+    if not match["player1_id"] or not match["player2_id"]:
+        conn.close()
+        flash("Dieses KO-Spiel ist noch nicht bereit.")
+        return redirect(url_for("admin"))
     settings = get_discipline_settings(match["discipline"])
     sets_rows = load_match_sets("knockout_match_sets", match_id)
     sets_values = [{"set_number": r["set_number"], "score1": r["score1"], "score2": r["score2"]} for r in sets_rows]
@@ -1276,8 +1344,11 @@ def update_knockout_match(match_id):
             if not raw1 or not raw2:
                 error_message = f"Satz {i} ist unvollständig."
                 break
-            score1 = int(raw1)
-            score2 = int(raw2)
+            score1, error1 = parse_non_negative_int(raw1, f"Satz {i} Spieler 1")
+            score2, error2 = parse_non_negative_int(raw2, f"Satz {i} Spieler 2")
+            if error1 or error2:
+                error_message = error1 or error2
+                break
             valid, msg = validate_set_score(match["discipline"], settings["target"], score1, score2)
             if not valid:
                 error_message = f"Satz {i}: {msg}"
@@ -1313,6 +1384,7 @@ def update_knockout_match(match_id):
     conn.close()
     return render_template("update_knockout_match.html", match=match, settings=settings, set_rows=range(1, settings["sets"] + 1), sets_values=sets_values)
 
+
 @app.route("/admin/reset_all", methods=["POST"])
 def reset_all():
     if not is_admin():
@@ -1342,7 +1414,7 @@ def reset_all():
 
     flash("Alle Daten wurden zurückgesetzt.")
     return redirect(url_for("admin"))
-    
+
 
 if __name__ == "__main__":
     init_db()
