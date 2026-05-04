@@ -8,13 +8,22 @@
             <p>Verwalte Spieler, Turnier, Gruppen, Spiele und KO-Runden.</p>
         </div>
         <div class="button-row">
-            <a class="button primary preserve-scroll-link" href="{{ url_for('create_tournament') }}">Turnier erstellen</a>
-            <a class="button secondary preserve-scroll-link" href="{{ url_for('prepare_knockout') }}">KO-Feld berechnen</a>
-            <a class="button secondary preserve-scroll-link" href="{{ url_for('start_knockout') }}">KO-Phase starten</a>
-            {% if can_finish %}
-            <a class="button primary preserve-scroll-link" href="{{ url_for('finish_tournament') }}">Turnier beenden</a>
-            {% endif %}
-        </div>
+    <a class="button primary preserve-scroll-link" href="{{ url_for('create_tournament') }}">Turnier erstellen</a>
+
+    <form action="{{ url_for('prepare_knockout') }}" method="post" style="display:inline;">
+        <button class="button secondary preserve-scroll-link" type="submit">KO-Feld berechnen</button>
+    </form>
+
+    <form action="{{ url_for('start_knockout') }}" method="post" style="display:inline;">
+        <button class="button secondary preserve-scroll-link" type="submit">KO-Phase starten</button>
+    </form>
+
+    {% if can_finish %}
+    <form action="{{ url_for('finish_tournament') }}" method="post" style="display:inline;">
+        <button class="button primary preserve-scroll-link" type="submit">Turnier beenden</button>
+    </form>
+    {% endif %}
+</div>
     </div>
 
     <div class="phase-banner phase-{{ phase|replace('_', '-') }}">
@@ -65,7 +74,10 @@
                 <td>{{ player["age"] }}</td>
                 <td class="actions">
                     <a class="button small secondary preserve-scroll-link" href="{{ url_for('edit_player', player_id=player['id']) }}">Bearbeiten</a>
-                    <a class="button small danger preserve-scroll-link" href="{{ url_for('delete_player', player_id=player['id']) }}">Löschen</a>
+                   
+                    <form action="{{ url_for('delete_player', player_id=player['id']) }}" method="post" style="display:inline;">
+                        <button class="button small danger" type="submit" onclick="return confirm('Spieler wirklich löschen?')">Löschen</button>
+                    </form>
                 </td>
             </tr>
             {% else %}
