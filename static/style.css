@@ -308,3 +308,54 @@ th { background: #f9fafb; }
         text-align: center;
     }
 }
+
+.login-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: #f5f7fa;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    background: white;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    text-align: center;
+}
+
+.login-card h1 {
+    margin-top: 0;
+}
+
+.login-card input {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    margin: 12px 0;
+}
+
+.login-card button {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+}
+
+.login-error {
+    color: red;
+    font-weight: bold;
+}
+
+@media (max-width: 480px) {
+    .login-card {
+        padding: 22px;
+    }
+
+    .login-card h1 {
+        font-size: 24px;
+    }
+}
