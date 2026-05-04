@@ -6,8 +6,10 @@
     <title>Familien Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="login-body">
-    <main class="login-card">
+<body>
+
+<div class="container">
+    <div class="card login-card">
         <h1>Familien Login</h1>
         <p>Bitte Familien-Passwort eingeben.</p>
 
@@ -19,8 +21,10 @@
 
         <form method="POST">
             <input type="password" name="password" placeholder="Passwort" required>
-            <button type="submit">Einloggen</button>
+            <button type="submit" class="btn-primary">Einloggen</button>
         </form>
-    </main>
+    </div>
+</div>
+
 </body>
 </html>
