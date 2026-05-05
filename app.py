@@ -439,37 +439,63 @@ def load_match_sets(table_name, match_id):
 def create_groups():
     conn = get_connection()
     cursor = conn.cursor()
+
     cursor.execute("SELECT group_size FROM tournament_settings ORDER BY id DESC LIMIT 1")
     result = cursor.fetchone()
+
     if not result:
         conn.close()
         return
-    desired_group_size = result["group_size"]
-    if desired_group_size <= 0:
-        desired_group_size = 1
+
+    desired_group_count = result["group_size"]
+
+    if desired_group_count <= 0:
+        desired_group_count = 1
+
     cursor.execute("SELECT id, name, age FROM players ORDER BY age ASC, name ASC")
     players = cursor.fetchall()
+
     cursor.execute("DELETE FROM groups")
+
     if not players:
         conn.commit()
         conn.close()
         return
+
     num_players = len(players)
-    num_groups = max(1, math.ceil(num_players / desired_group_size))
+
+    # Nicht mehr Gruppen als Spieler erzeugen
+    num_groups = min(desired_group_count, num_players)
+
     base_size = num_players // num_groups
     remainder = num_players % num_groups
-    group_sizes = [base_size + (1 if i < remainder else 0) for i in range(num_groups)]
+
+    group_sizes = [
+        base_size + (1 if i < remainder else 0)
+        for i in range(num_groups)
+    ]
+
     group_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     start = 0
+
     for idx, size in enumerate(group_sizes):
         group_name = f"Gruppe {group_letters[idx]}" if idx < len(group_letters) else f"Gruppe {idx + 1}"
+
+        # Spieler sind bereits nach Alter sortiert.
+        # Dadurch entstehen faire Altersblöcke:
+        # Gruppe A eher jünger, Gruppe B mittel, Gruppe C älter usw.
         chunk = players[start:start + size]
+
         for player in chunk:
-            cursor.execute("INSERT INTO groups (group_name, player_id) VALUES (?, ?)", (group_name, player["id"]))
+            cursor.execute(
+                "INSERT INTO groups (group_name, player_id) VALUES (?, ?)",
+                (group_name, player["id"])
+            )
+
         start += size
+
     conn.commit()
     conn.close()
-
 
 def create_matches():
     conn = get_connection()
@@ -1108,9 +1134,9 @@ def create_tournament():
     if not is_admin():
         return redirect(url_for("admin"))
     if request.method == "POST":
-        group_size, error = parse_non_negative_int(request.form.get("group_size", ""), "Gruppengröße")
+        group_size, error = parse_non_negative_int(request.form.get("group_size", ""), "Anzahl Gruppen")
         if error or group_size is None or group_size <= 0:
-            flash("Bitte eine gültige Gruppengröße größer als 0 eingeben.")
+            flash("Bitte eine gültige Anzahl Gruppen größer als 0 eingeben.")
             return redirect(url_for("create_tournament"))
 
         billiard = 1 if "billiard" in request.form else 0
